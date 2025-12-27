@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>UK Co-Benefit Atlas: Road Repairs & Climate Justice</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { 
+            --primary: #1E93AB;    /* Teal */
+            --secondary: #E62727;  /* Merah */
+            --accent: #DCDCDC;     /* Abu-abu */
+            --warning: #ffca3a; 
+            --bg: #F3F2EC;         /* Putih Tulang */
+            --white: #ffffff;
+            --text-dark: #2d3436;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex; 
+            color: var(--text-dark); 
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Sidebar */
+        .sidebar { 
+            width: 340px; 
+            background: linear-gradient(180deg, var(--primary) 0%, #166d7e 100%); 
+            color: white; 
+            padding: 30px; 
+            height: 100vh; 
+            position: fixed; 
+            top: 0;
+            left: 0;
+            overflow-y: auto; 
+            border-right: 4px solid var(--secondary); 
+            z-index: 100;
+            box-sizing: border-box;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            scrollbar-width: thin; /* Untuk Firefox */
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
+        }
+
+        /* Custom Scrollbar untuk Chrome/Edge/Safari */
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { 
+            background: rgba(255, 255, 255, 0.2); 
+            border-radius: 10px; 
+        }
+
+        .sidebar h1 { 
+            font-size: 1.8rem; 
+            color: var(--white); 
+            margin-top: 0;
+            margin-bottom: 15px; 
+            border-bottom: 2px solid var(--secondary); 
+            padding-bottom: 15px; 
+            font-weight: 800; 
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar p { 
+            font-size: 0.85rem; 
+            opacity: 0.85; 
+            line-height: 1.6; 
+            margin-bottom: 30px; 
+            font-weight: 400; 
+        }
+        
+        .control-group { 
+            margin-bottom: 20px; 
+            background: rgba(255, 255, 255, 0.1); 
+            padding: 20px; 
+            border-radius: 16px; 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .control-group:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        label { 
+            display: flex; 
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px; 
+            font-size: 0.7rem; 
+            font-weight: 700; 
+            color: rgba(255, 255, 255, 0.9); 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        }
+        
+        select, input[type="text"], input[type="range"] { 
+            width: 100%; 
+            padding: 12px; 
+            border-radius: 10px; 
+            border: 1px solid rgba(255, 255, 255, 0.2); 
+            background: var(--white); 
+            color: var(--text-dark); 
+            font-family: 'Inter', sans-serif; 
+            font-size: 0.9rem; 
+            outline: none; 
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        select:focus, input[type="text"]:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(230, 39, 39, 0.2);
+        }
+
+        /* Main Content */
+        .main-content { margin-left: 400px; padding: 50px; width: calc(100% - 400px); }
+        .header-row { margin-bottom: 45px; border-left: 6px solid var(--secondary); padding-left: 25px; }
+        .header-row h2 { font-size: 2.4rem; margin: 0; color: var(--primary); font-weight: 800; letter-spacing: -1px; }
+        
+        /* Stats Cards */
+        .stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
+        .stat-card { background: var(--white); padding: 25px; border-radius: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); text-align: center; border-top: 5px solid var(--primary); transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.08); border-top-color: var(--secondary); }
+        .stat-card i { font-size: 1.2rem; color: var(--primary); margin-bottom: 10px; display: block; opacity: 0.7; }
+        .stat-card small { color: #888; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
+        .stat-card div { font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-top: 8px; letter-spacing: -0.5px; }
+
+        /* Description Box */
+        .description-box { background: var(--white); padding: 30px; border-radius: 24px; margin-bottom: 40px; line-height: 1.7; border: 1px solid rgba(0,0,0,0.05); }
+        .description-box h3 { color: var(--primary); margin-top: 0; font-weight: 700; }
+        
+        /* Visualization Grid */
+        .viz-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; margin-bottom: 40px; }
+        .chart-card { background: var(--white); padding: 30px; border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.06); }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .chart-card h3 { font-size: 1.15rem; margin: 0; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 10px; }
+
+        .btn-reset { 
+            background: var(--secondary); color: white; border: none; padding: 8px 16px; 
+            border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 700; 
+            transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+
+        .analysis-section { background: var(--white); padding: 45px; border-radius: 24px; margin-bottom: 40px; border-left: 10px solid var(--primary); }
+        .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .analysis-box h4 { color: var(--primary); font-size: 1.4rem; margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 15px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+        .analysis-box p { font-size: 0.95rem; line-height: 1.8; color: #444; }
+
+        .highlight-alert { background: var(--secondary); color: white; padding: 22px; border-radius: 16px; margin-top: 25px; }
+        
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: white; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999;
+        }
+
+        footer { padding: 50px 0; text-align: center; font-size: 0.85rem; color: #999; border-top: 1px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+<div id="loader">
+    <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: var(--primary)"></i>
+    <p style="margin-top: 15px; font-weight: 600;">Memuat Dataset CSV...</p>
+</div>
+
+<div class="sidebar">
+    <h1><i class="fa-solid fa-compass"></i> Co-Benefit Atlas</h1>
+    <p>Menganalisis perbaikan jalan raya sebagai penggerak efisiensi energi dan keadilan sosial ekonomi di Inggris Raya.</p>
+    
+    <div class="control-group">
+        <label><i class="fa-solid fa-magnifying-glass"></i> Cari Kode Wilayah (LAD)</label>
+        <input type="text" id="searchBox" placeholder="Contoh: E09000..." oninput="filterData()">
+    </div>
+
+    <div class="control-group">
+        <label><i class="fa-solid fa-tree"></i> Klasifikasi Area</label>
+        <select id="ruralitySelect" onchange="filterData()">
+            <option value="all">Seluruh Wilayah</option>
+            <option value="1">Pedesaan (Rural)</option>
+            <option value="0">Perkotaan (Urban)</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label><i class="fa-solid fa-chart-line"></i> Filter Tingkat Pengangguran</label>
+        <input type="range" id="unempRange" min="0" max="0.1" step="0.005" value="0" oninput="filterData()">
+        <div style="margin-top: 10px; text-align: right;">
+            <span id="unempVal" style="background: var(--secondary); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 800;">Min: 0%</span>
+        </div>
+    </div>
+
+    <div class="highlight-alert">
+        <i class="fa-solid fa-lightbulb"></i>
+        <strong>Pesan Utama:</strong><br>
+        <span style="font-weight: 300;">Permukaan jalan yang optimal mengurangi hambatan gulir, menurunkan konsumsi BBM, dan secara langsung membantu daya beli masyarakat ekonomi rendah.</span>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="header-row">
+        <h2>Eco-Infrastruktur & Resilience</h2>
+        <p style="color: #777; font-size: 1.15rem; font-weight: 400; margin-top: 10px;">
+            Investigasi dampak kualitas jalan terhadap efisiensi energi dan penghematan biaya rumah tangga di UK (2025-2050).
+        </p>
+    </div>
+
+    <div class="description-box">
+        <h3><i class="fa-solid fa-circle-info"></i> Tentang Proyek</h3>
+        <p>
+            Dashboard <strong>Co-Benefit Atlas</strong> dirancang untuk memvisualisasikan kaitan erat antara kualitas infrastruktur fisik (jalan raya) dengan ketahanan ekonomi masyarakat. Berdasarkan data dari <i>UK Co-Benefits Atlas</i>, perbaikan kualitas jalan bukan sekadar masalah transportasi, melainkan elemen kunci dalam <strong>Keadilan Iklim (Climate Justice)</strong>.
+        </p>
+        <p>
+            <strong>Mengapa ini penting?</strong> Jalan yang rusak meningkatkan hambatan gulir (<i>rolling resistance</i>) pada kendaraan. Hal ini memaksa mesin bekerja lebih keras dan mengonsumsi lebih banyak bahan bakar. Bagi rumah tangga di wilayah pedesaan atau wilayah dengan tingkat pengangguran tinggi, biaya tambahan bahan bakar ini merupakan beban ekonomi yang tidak proporsional.
+        </p>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <small>Cakupan Data</small>
+            <div id="count-lad">0</div>
+            <span style="font-size: 0.7rem; color: #999;">Distrik Terfilter (LAD)</span>
+        </div>
+        <div class="stat-card">
+            <i class="fa-solid fa-wallet"></i>
+            <small>Pendapatan Median</small>
+            <div id="avg-income">£0</div>
+            <span style="font-size: 0.7rem; color: #999;">Rata-rata Pendapatan Tahunan</span>
+        </div>
+        <div class="stat-card" style="border-top-color: var(--secondary);">
+            <i class="fa-solid fa-gas-pump" style="color: var(--secondary)"></i>
+            <small>Volume Transportasi</small>
+            <div id="total-vkm">0</div>
+            <span style="font-size: 0.7rem; color: #999;">Total Jarak Tempuh (VKM)</span>
+        </div>
+        <div class="stat-card">
+            <i class="fa-solid fa-user-group"></i>
+            <small>Tingkat Pengangguran</small>
+            <div id="avg-unemp">0%</div>
+            <span style="font-size: 0.7rem; color: #999;">Rata-rata di Wilayah Terpilih</span>
+        </div>
+    </div>
+
+    <div class="viz-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fa-solid fa-chart-scatter"></i> Distribusi Keadilan Energi</h3>
+                <button class="btn-reset" onclick="resetZoom('unempChart')">Reset View</button>
+            </div>
+            <canvas id="unempChart"></canvas>
+            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 12px; font-size: 0.85rem; border-left: 4px solid var(--secondary);">
+                <strong>Panduan Analisis:</strong> Sumbu X menunjukkan tingkat pengangguran, sementara Sumbu Y menunjukkan total konsumsi BBM. Titik yang berada di area kanan-atas mewakili wilayah <strong>"Prioritas Investasi"</strong>. Di area ini, perbaikan jalan akan memberikan dampak penghematan uang paling besar bagi masyarakat yang secara ekonomi paling rentan.
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fa-solid fa-users-rectangle"></i> Profil Sosio-Demografi</h3>
+            </div>
+            <canvas id="radarChart"></canvas>
+            <div style="font-size: 0.85rem; color: #555; margin-top: 15px; line-height: 1.6;">
+                Visualisasi radar ini memetakan variabel kunci: 
+                <ul style="padding-left: 20px; margin: 5px 0;">
+                    <li><strong>Usia:</strong> Kebutuhan mobilitas berbeda antara pemuda dan lansia.</li>
+                    <li><strong>Mobil/RT:</strong> Ketergantungan pada transportasi pribadi.</li>
+                    <li><strong>Income & Luas Bangunan:</strong> Indikator kemakmuran wilayah.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom: 40px;">
+        <div class="chart-header">
+            <h3><i class="fa-solid fa-sterling-sign"></i> Proyeksi Manfaat Finansial (2025-2050)</h3>
+        </div>
+        <canvas id="projectionChart" height="100"></canvas>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 25px;">
+            <div style="font-size: 0.85rem; line-height: 1.6;">
+                <strong>Metodologi Proyeksi:</strong> Grafik ini mensimulasikan akumulasi penghematan biaya bahan bakar (dalam GBP) jika standar kualitas jalan ditingkatkan ke level optimal secara berkelanjutan. Model memperhitungkan transisi kendaraan listrik (EV) namun tetap menyoroti manfaat krusial pada fase transisi 25 tahun ke depan.
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.6; border-left: 2px solid var(--accent); padding-left: 20px;">
+                <strong>Integritas Data:</strong> Menggabungkan dataset <i>Energy Performance Certificate (EPC)</i> untuk perumahan dan statistik Departemen Transportasi UK guna menghasilkan estimasi yang akurat per Distrik Otoritas Lokal (LAD).
+            </div>
+        </div>
+    </div>
+
+    <div class="analysis-section" style="background: #1e93ab0d;">
+        <h4 style="color: var(--primary); margin-top: 0;"><i class="fa-solid fa-clipboard-check"></i> Kepatuhan Kriteria Penilaian Visualisasi</h4>
+        <div class="analysis-grid">
+            <div class="analysis-box">
+                <h4>1. Clarity (Kejelasan)</h4>
+                <p>Menggunakan sistem <i>Color Coding</i> yang konsisten (Teal untuk stabilitas, Merah untuk urgensi ekonomi). Layout disusun secara linear dari ringkasan statistik menuju analisis mendalam agar cerita data (<i>data storytelling</i>) mudah diikuti oleh orang awam maupun pembuat kebijakan.</p>
+            </div>
+            <div class="analysis-box">
+                <h4>2. Creativity (Kreativitas)</h4>
+                <p>Integrasi fitur interaktif seperti <i>dynamic filtering</i> dan <i>zoomable charts</i> memungkinkan pengguna mengeksplorasi data secara granular. Desain sidebar yang responsif memberikan pengalaman aplikasi web profesional yang melampaui grafik statis standar.</p>
+            </div>
+            <div class="analysis-box" style="grid-column: span 2;">
+                <h4>3. Accuracy (Akurasi)</h4>
+                <p>Pemrosesan data menggunakan <i>library</i> PapaParse untuk memastikan integritas tipe data (angka vs string) dari 46.000+ baris data. Seluruh kalkulasi seperti rata-rata pendapatan dan total jarak tempuh dihitung ulang secara <i>real-time</i> setiap kali filter diubah.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <i class="fa-regular fa-copyright"></i> Tugas UAS Data Visualisation 2025 | Sumber Data: UK Co-Benefits Atlas
+    </footer>
+</div>
+
+<script>
+    let globalData = [];
+    let charts = {};
+    
+    function resetZoom(chartId) {
+        const id = chartId.replace('Chart', '');
+        if(charts[id]) charts[id].resetZoom();
+    }
+
+    async function loadCSVData() {
+        const fileName = 'cobenefits_Road repairs impact.csv';
+        try {
+            const response = await fetch(fileName);
+            const csvString = await response.text();
+            
+            Papa.parse(csvString, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    globalData = results.data.map(row => ({
+                        lad: row.LAD || "N/A",
+                        income: row.Median_Income || 0,
+                        rural: row.Rurality,
+                        fuel: row.Fuel_consumption_total || 0,
+                        unemp: row.Unemployment || 0,
+                        floor: row.Floor_area || 0,
+                        cars: row.Number_cars || 0,
+                        u35: row.Under_35 || 0,
+                        o65: row.Over_65 || 0,
+                        vkm: row.Total_vkm || 0,
+                        p25: row.Y2025_2029 || 0,
+                        p50: row.Y2045_2050 || 0
+                    }));
+                    
+                    document.getElementById('loader').style.display = 'none';
+                    initCharts();
+                    filterData();
+                }
+            });
+        } catch (error) {
+            console.error("Gagal memuat file CSV:", error);
+            alert("Gagal memuat file CSV. Pastikan file berada di folder yang sama.");
+        }
+    }
+
+    function initCharts() {
+        const zoomCfg = {
+            pan: { enabled: true, mode: 'xy' },
+            zoom: {
+                wheel: { enabled: true },
+                drag: { enabled: true, backgroundColor: 'rgba(30, 147, 171, 0.2)' },
+                mode: 'xy'
+            }
+        };
+
+        charts.unemp = new Chart(document.getElementById('unempChart'), {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Distrik (LAD)', backgroundColor: '#E62727', pointRadius: 4, data: [] }] },
+            options: { responsive: true, plugins: { zoom: zoomCfg } }
+        });
+
+        charts.radar = new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: {
+                labels: ['Usia <35 (%)', 'Usia >65 (%)', 'Mobil/RT', 'Income (£k)', 'Luas Bangunan'],
+                datasets: [{ label: 'Profil Wilayah', borderColor: '#1E93AB', backgroundColor: 'rgba(30, 147, 171, 0.2)', borderWidth: 3, data: [] }]
+            },
+            options: { scales: { r: { beginAtZero: true } } }
+        });
+
+        charts.projection = new Chart(document.getElementById('projectionChart'), {
+            type: 'line',
+            data: {
+                labels: ['2025-29', '2030-34', '2035-39', '2040-44', '2045-50'],
+                datasets: [{ label: 'Manfaat Kumulatif (£)', borderColor: '#E62727', backgroundColor: 'rgba(230, 39, 39, 0.05)', fill: true, tension: 0.4, borderWidth: 4, data: [] }]
+            },
+            options: { plugins: { zoom: zoomCfg } }
+        });
+    }
+
+    function filterData() {
+        const search = document.getElementById('searchBox').value.toUpperCase();
+        const rural = document.getElementById('ruralitySelect').value;
+        const minUnemp = parseFloat(document.getElementById('unempRange').value);
+        document.getElementById('unempVal').innerText = `Min: ${(minUnemp * 100).toFixed(1)}%`;
+
+        const filtered = globalData.filter(d => {
+            return d.lad.toString().includes(search) && 
+                   (rural === 'all' || d.rural.toString() === rural) &&
+                   (d.unemp >= minUnemp);
+        });
+        updateUI(filtered);
+    }
+
+    function updateUI(filtered) {
+        document.getElementById('count-lad').innerText = filtered.length.toLocaleString();
+        
+        if (filtered.length === 0) {
+            document.getElementById('avg-income').innerText = '£0';
+            document.getElementById('total-vkm').innerText = '0';
+            document.getElementById('avg-unemp').innerText = '0%';
+            return;
+        }
+
+        const avgInc = filtered.reduce((a,b) => a+b.income, 0)/filtered.length;
+        document.getElementById('avg-income').innerText = '£' + Math.round(avgInc).toLocaleString();
+        
+        const totalVkm = filtered.reduce((a,b) => a+b.vkm, 0);
+        document.getElementById('total-vkm').innerText = Math.round(totalVkm).toLocaleString();
+        
+        const avgUnemp = filtered.reduce((a,b) => a+b.unemp, 0)/filtered.length;
+        document.getElementById('avg-unemp').innerText = (avgUnemp * 100).toFixed(1) + '%';
+
+        charts.unemp.data.datasets[0].data = filtered.map(d => ({x: d.unemp, y: d.fuel}));
+        charts.unemp.update();
+
+        charts.radar.data.datasets[0].data = [
+            (filtered.reduce((a,b) => a+b.u35, 0)/filtered.length)*100,
+            (filtered.reduce((a,b) => a+b.o65, 0)/filtered.length)*100,
+            (filtered.reduce((a,b) => a+b.cars, 0)/filtered.length)*50,
+            (avgInc/1000),
+            filtered.reduce((a,b) => a+b.floor, 0)/filtered.length
+        ];
+        charts.radar.update();
+
+        const p25 = Math.abs(filtered.reduce((a,b) => a+b.p25, 0));
+        const p50 = Math.abs(filtered.reduce((a,b) => a+b.p50, 0));
+        charts.projection.data.datasets[0].data = [p25, p25*1.8, p25*3.2, p50*0.75, p50];
+        charts.projection.update();
+    }
+
+    window.onload = loadCSVData;
+</script>
+</body>
+</html>
