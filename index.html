@@ -331,16 +331,26 @@
     }
 
     async function loadCSVData() {
-        const fileName = 'cobenefits_Road repairs impact.csv';
+        // Menggunakan './' memastikan file dicari di direktori yang sama dengan index.html
+        const fileName = './cobenefits_Road repairs impact.csv';
+        
         try {
-            const response = await fetch(fileName);
-            const csvString = await response.text();
-            
-            Papa.parse(csvString, {
+            // Langsung memanggil Papa.parse ke URL file agar lebih efisien (Streaming)
+            Papa.parse(fileName, {
+                download: true, // Mengunduh file secara otomatis
                 header: true,
                 dynamicTyping: true,
                 skipEmptyLines: true,
+                error: function(err, file) {
+                    console.error("Gagal memproses CSV:", err);
+                    alert("Gagal memuat file CSV. Pastikan nama file di GitHub sama persis.");
+                },
                 complete: function(results) {
+                    if (results.data.length === 0) {
+                        console.error("File ditemukan tapi datanya kosong.");
+                        return;
+                    }
+                    
                     globalData = results.data.map(row => ({
                         lad: row.LAD || "N/A",
                         income: row.Median_Income || 0,
@@ -356,14 +366,14 @@
                         p50: row.Y2045_2050 || 0
                     }));
                     
+                    console.log("Data berhasil dimuat:", globalData.length, "baris.");
                     document.getElementById('loader').style.display = 'none';
                     initCharts();
                     filterData();
                 }
             });
         } catch (error) {
-            console.error("Gagal memuat file CSV:", error);
-            alert("Gagal memuat file CSV. Pastikan file berada di folder yang sama.");
+            console.error("Network Error:", error);
         }
     }
 
