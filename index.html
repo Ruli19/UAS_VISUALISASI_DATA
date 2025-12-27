@@ -331,37 +331,50 @@
     }
 
     async function loadCSVData() {
-    const fileName = 'cobenefits_Road repairs impact.csv';
-    
-    Papa.parse(fileName, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        worker: true, // Menggunakan Web Worker agar UI tidak lag
-        fastMode: true, // Mempercepat parsing jika data CSV konsisten
-        complete: function(results) {
-            globalData = results.data.map(row => ({
-                lad: row.LAD || "N/A",
-                income: row.Median_Income || 0,
-                rural: row.Rurality,
-                fuel: row.Fuel_consumption_total || 0,
-                unemp: row.Unemployment || 0,
-                floor: row.Floor_area || 0,
-                cars: row.Number_cars || 0,
-                u35: row.Under_35 || 0,
-                o65: row.Over_65 || 0,
-                vkm: row.Total_vkm || 0,
-                p25: row.Y2025_2029 || 0,
-                p50: row.Y2045_2050 || 0
-            }));
-            
-            document.getElementById('loader').style.display = 'none';
-            initCharts();
-            filterData();
-        }
-    });
-}
+        // Gunakan nama file tanpa './' di depannya untuk kompatibilitas GitHub Pages
+        const fileName = 'cobenefits_Road repairs impact.csv';
+        
+        console.log("Mulai mengunduh dataset...");
+        
+        Papa.parse(fileName, {
+            download: true,
+            header: true,
+            dynamicTyping: true,
+            skipEmptyLines: true,
+            // Nonaktifkan worker jika menyebabkan 'Invalid URL'
+            worker: false, 
+            complete: function(results) {
+                if (results.data && results.data.length > 0) {
+                    console.log("Parsing selesai. Jumlah baris:", results.data.length);
+                    
+                    globalData = results.data.map(row => ({
+                        lad: row.LAD || "N/A",
+                        income: row.Median_Income || 0,
+                        rural: row.Rurality,
+                        fuel: row.Fuel_consumption_total || 0,
+                        unemp: row.Unemployment || 0,
+                        floor: row.Floor_area || 0,
+                        cars: row.Number_cars || 0,
+                        u35: row.Under_35 || 0,
+                        o65: row.Over_65 || 0,
+                        vkm: row.Total_vkm || 0,
+                        p25: row.Y2025_2029 || 0,
+                        p50: row.Y2045_2050 || 0
+                    }));
+                    
+                    document.getElementById('loader').style.display = 'none';
+                    initCharts();
+                    filterData();
+                } else {
+                    console.error("Data tidak ditemukan dalam file CSV.");
+                }
+            },
+            error: function(err) {
+                console.error("Kesalahan PapaParse:", err);
+                alert("Gagal memproses data. Silakan cek konsol (F12).");
+            }
+        });
+    }
     function initCharts() {
         const zoomCfg = {
             pan: { enabled: true, mode: 'xy' },
